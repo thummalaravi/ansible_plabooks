@@ -1,0 +1,21 @@
+---
+-
+  hosts: webserver
+  become: true
+  tasks:
+    -
+      name: "install nginx"
+      apt: "name=nginx state=present  update_cache=yes"
+
+
+    - name: Start NGiNX
+      service:
+      name: nginx
+      state: started
+      become: yes
+
+    - name: restart nginx
+      service:
+      name: nginx
+      state: restarted
+      become: yes
