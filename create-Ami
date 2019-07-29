@@ -22,20 +22,25 @@
 
   - name: Move files to html dir
     command: mv /srv /var/www/html
--
-  hosts: web02
+
+- hosts: web02
   become: true
   vars:
-     contents: "{{ lookup('env', 'AMINAME') }}"
-  tasks:
- - ec2_ami:
-     aws_access_key: XXXXXXXXXXX
-     aws_secret_key: XXXXXXXXXXX
+      contents: "{{ lookup('env', 'AMINAME') }}"
+      instance_id:  i-02c9df0e19af81424
       region: us-east-2
-     instance_id: i-02c9df0e19af81424
+  tasks:
+  - ec2_ami:
+     aws_access_key: XXXXXXXXXXXXXXXXXX
+     aws_secret_key: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+     region: "{{region }}"
+#     instance_id: i-02c9df0e19af81424
+     instance_id: "{{ instance_id }}"
      wait: yes
      name: "{{contents}}"
      tags:
       Name: "{{contents}}"
       Service: TestService
-   register: image
+    register: image
+
+
