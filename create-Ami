@@ -34,7 +34,6 @@
      aws_access_key: XXXXXXXXXXXXXXXXXX
      aws_secret_key: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
      region: "{{region }}"
-#     instance_id: i-02c9df0e19af81424
      instance_id: "{{ instance_id }}"
      wait: yes
      name: "{{contents}}"
