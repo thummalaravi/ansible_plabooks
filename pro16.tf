@@ -240,3 +240,103 @@ resource "aws_instance" "db_server" {
         Name = "db_server"
   }
 }
+
+resource "aws_launch_configuration" "project16-launchconfig" {
+  name_prefix          = "project16-launchconfig"
+  image_id             = "${data.aws_ami.ubuntu.id}"
+  instance_type        = "t2.micro"
+  key_name             = "deployer-key"
+  security_groups      = ["${aws_security_group.allow_tls.id}"]
+}
+
+resource "aws_autoscaling_group" "project16-autoscaling" {
+  name                 = "project16-autoscaling"
+  vpc_zone_identifier  = ["${aws_subnet.project16_2b.id}"]
+  launch_configuration = "${aws_launch_configuration.project16-launchconfig.name}"
+  min_size             = 1
+  max_size             = 2
+  health_check_grace_period = 300
+  health_check_type = "EC2"
+  force_delete = true
+
+# Required to redeploy without an outage.
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tag {
+      key = "Name"
+      value = "ec2 instance"
+      propagate_at_launch = true
+  }
+}
+resource "aws_security_group" "elb-securitygroup" {
+  vpc_id = "${aws_vpc.project16.id}"
+  name = "elb"
+  description = "security group for load balancer"
+  egress {
+      from_port = 0
+      to_port = 0
+      protocol = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+      from_port = 80
+      to_port = 80
+      protocol = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "project16"
+  }
+}
+
+resource "aws_elb" "my-elb" {
+  name = "my-elb"
+  subnets = ["${aws_subnet.project16_1a.id}", "${aws_subnet.project16_1b.id}", "${aws_subnet.project16_1c.id}"]
+  security_groups = ["${aws_security_group.elb-securitygroup.id}"]
+ listener {
+    instance_port = 80
+    instance_protocol = "http"
+    lb_port = 80
+    lb_protocol = "http"
+  }
+  health_check {
+    healthy_threshold = 2
+    unhealthy_threshold = 2
+    timeout = 3
+    target = "HTTP:80/"
+    interval = 30
+  }
+
+  cross_zone_load_balancing = true
+  connection_draining = true
+  connection_draining_timeout = 400
+  tags = {
+    Name = "project16"
+  }
+}
+resource "aws_autoscaling_attachment" "link" {
+
+ autoscaling_group_name = "${aws_autoscaling_group.project16-autoscaling.id}"
+ elb                  = "${aws_elb.my-elb.id}"
+
+}
+
+# route 53
+resource "aws_route53_zone" "project16" {
+ name = "vss-carrentals.ga"
+}
+
+resource "aws_route53_record" "project16" {
+ zone_id = "${aws_route53_zone.project16.zone_id}"
+ name    = "vss-carrentals.ga"
+ type    = "A"
+
+ alias {
+   name                   = "${aws_elb.my-elb.dns_name}"
+   zone_id                = "${aws_elb.my-elb.zone_id}"
+   evaluate_target_health = true
+ }
+}
