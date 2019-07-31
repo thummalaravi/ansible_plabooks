@@ -1,6 +1,6 @@
 ---
 -
-  hosts: web01
+  hosts: webservers
   become: true
   tasks:
 
